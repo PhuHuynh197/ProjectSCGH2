@@ -102,7 +102,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t projectscgh2:latest . || echo "Skip docker build if no Dockerfile"
+          docker build -t projectscgh:latest . || echo "Skip docker build if no Dockerfile"
 
       - name: Trivy Docker Image Scan
         run: |
