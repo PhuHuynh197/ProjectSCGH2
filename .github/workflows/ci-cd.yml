@@ -121,3 +121,4 @@ jobs:
           git add -f security-report.md
           git commit -m "🛡️ Add latest security scan report"
           git push https://x-access-token:$GH_TOKEN@github.com/PhuHuynh197/ProjectSCGH2.git main
+
