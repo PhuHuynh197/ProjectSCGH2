@@ -102,7 +102,7 @@ jobs:
 
       - name: Build Docker image (only if .jar exists)
         run: |
-          if ls target/*.jar 1> /dev/null 2>&1; then
+          if compgen -G "target/*.jar" > /dev/null; then
             docker build -t projectscgh2-local:latest .
           else
             echo "⚠️ No JAR file found in target/. Skipping Docker build."
