@@ -37,19 +37,19 @@ extract_trivy_json() {
   local FILE=$1
   echo -e "\n## 🔍 Trivy Scan Report from \`$FILE\`" >> $OUTPUT_FILE
 
-  # Đếm tổng số lỗ hổng trong tất cả results
+  # Đếm tổng số vulnerabilities thực tế từ tất cả Results
   local VULN_COUNT
-  VULN_COUNT=$(jq '[.Results[]? | select(.Vulnerabilities != null) | .Vulnerabilities[]] | length' "$FILE")
+  VULN_COUNT=$(jq '[.Results[]? | select(.Vulnerabilities != null) | .Vulnerabilities[]?] | length' "$FILE")
 
   if [[ "$VULN_COUNT" -eq 0 ]]; then
-    echo "**✅ No vulnerabilities found in \`$FILE\`.**" >> $OUTPUT_FILE
+    echo "✅ No vulnerabilities found in \`$FILE\`." >> $OUTPUT_FILE
     return
   fi
 
   echo '| CVE | Package | Version | Severity | CVSS | CIA | ASVS | Link |' >> $OUTPUT_FILE
   echo '|-----|---------|---------|----------|------|-----|------|------|' >> $OUTPUT_FILE
 
-  jq -c '.Results[] | select(.Vulnerabilities != null) | .Target as $target | .Vulnerabilities[]?' "$FILE" | while read -r vuln; do
+  jq -c '.Results[]? | select(.Vulnerabilities != null) | .Target as $target | .Vulnerabilities[]?' "$FILE" | while read -r vuln; do
     cve=$(echo "$vuln" | jq -r '.VulnerabilityID')
     pkg=$(echo "$vuln" | jq -r '.PkgName')
     version=$(echo "$vuln" | jq -r '.InstalledVersion')
