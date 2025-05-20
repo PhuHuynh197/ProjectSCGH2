@@ -110,4 +110,5 @@ jobs:
           git pull origin main
           git add security-report.md
           git commit -m "🛡️ Add latest security scan report"
-          git push https://x-access-token:$GH_TOKEN@github.com/PhuHuynh197/ProjectSCGH.git main
+          git push https://x-access-token:$GH_TOKEN@github.com/PhuHuynh197/ProjectSCGH2.git main
+
