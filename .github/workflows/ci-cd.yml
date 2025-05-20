@@ -102,16 +102,16 @@ jobs:
 
       - name: Build Docker image (only if .jar exists)
         run: |
-          if compgen -G "target/*.jar" > /dev/null; then
-            docker build -t projectscgh2-local:latest .
+          if ls target/*.jar 1> /dev/null 2>&1; then
+            docker build -t projectscgh-local:latest .
           else
             echo "⚠️ No JAR file found in target/. Skipping Docker build."
           fi
-
-      - name: Trivy Docker Image Scan (only if image exists)
+      
+      - name: Trivy Docker Image Scan (local only)
         run: |
-          if docker image inspect projectscgh2-local:latest > /dev/null 2>&1; then
-            trivy image projectscgh2-local:latest --format json -o trivy-image.json
+          if docker image inspect projectscgh-local:latest > /dev/null 2>&1; then
+            trivy image projectscgh-local:latest --format json -o trivy-image.json
           else
             echo "⚠️ Local Docker image not found. Skipping image scan."
           fi
