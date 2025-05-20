@@ -37,8 +37,11 @@ extract_trivy_json() {
   local FILE=$1
   echo -e "\n## 🔍 Trivy Scan Report from \`$FILE\`" >> $OUTPUT_FILE
 
-  local VULNS=$(jq '.Results[]?.Vulnerabilities // []' "$FILE" | jq length)
-  if [[ "$VULNS" -eq 0 ]]; then
+  # Đếm tổng số lỗ hổng trong tất cả results
+  local VULN_COUNT
+  VULN_COUNT=$(jq '[.Results[]? | select(.Vulnerabilities != null) | .Vulnerabilities[]] | length' "$FILE")
+
+  if [[ "$VULN_COUNT" -eq 0 ]]; then
     echo "**✅ No vulnerabilities found in \`$FILE\`.**" >> $OUTPUT_FILE
     return
   fi
@@ -113,7 +116,6 @@ extract_sonar_summary() {
     echo "* security_hotspots: $sec_hotspot" >> $OUTPUT_FILE
   fi
 }
-
 
 # --- Run All Extractors ---
 [ -f trivy-fs.json ] && extract_trivy_json "trivy-fs.json"
