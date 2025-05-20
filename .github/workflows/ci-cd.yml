@@ -103,17 +103,17 @@ jobs:
       - name: Build Docker image (only if .jar exists)
         run: |
           if ls target/*.jar 1> /dev/null 2>&1; then
-            docker build -t projectscgh:local .
+            docker build -t projectscgh-local:latest .
           else
             echo "⚠️ No JAR file found in target/. Skipping Docker build."
           fi
-
-      - name: Trivy Docker Image Scan
+      
+      - name: Trivy Docker Image Scan (local only)
         run: |
-          if [ -f Dockerfile ]; then
-            trivy image projectscgh:latest --format json -o trivy-image.json
+          if docker image inspect projectscgh-local:latest > /dev/null 2>&1; then
+            trivy image projectscgh-local:latest --format json -o trivy-image.json
           else
-            echo "No Dockerfile found, skipping image scan."
+            echo "⚠️ Local Docker image not found. Skipping image scan."
           fi
 
       - name: Generate Markdown Report (Trivy + Snyk + Sonar)
