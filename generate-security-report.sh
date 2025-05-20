@@ -121,6 +121,11 @@ extract_sonar_summary() {
 [ -f trivy-fs.json ] && extract_trivy_json "trivy-fs.json"
 [ -f trivy-image.json ] && extract_trivy_json "trivy-image.json"
 [ -f snyk.sarif ] && extract_snyk_sarif "snyk.sarif"
+if [ ! -f trivy-image.json ]; then
+  echo -e "\n## 🔍 Trivy Scan Report from \`trivy-image.json\`" >> $OUTPUT_FILE
+  echo "**⚠️ Skipped: No Docker image was built, so image scan did not run.**" >> $OUTPUT_FILE
+fi
+
 extract_sonar_summary
 
 echo -e "\n✅ Done. Generated $OUTPUT_FILE"
