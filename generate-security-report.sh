@@ -94,9 +94,12 @@ extract_sonar_summary() {
     echo "⚠️ Skipped SonarCloud summary (missing SONAR_TOKEN env)" >> $OUTPUT_FILE
     return
   fi
+  
+  # Determine repo name for SonarCloud component
+  REPO_NAME=$(basename "$(git config --get remote.origin.url)" .git)
+  API_URL="https://sonarcloud.io/api/measures/component?component=PhuHuynh197_${REPO_NAME}&metricKeys=bugs,vulnerabilities,security_hotspots"
 
-  local response=$(curl -s -u "$SONAR_TOKEN": \
-    "https://sonarcloud.io/api/measures/component?component=PhuHuynh197_ProjectSCGH2&metricKeys=bugs,vulnerabilities,security_hotspots"
+  local response=$(curl -s -u "$SONAR_TOKEN": "$API_URL")
 
   local bug_count=$(echo "$response" | jq -r '.component.measures[] | select(.metric=="bugs") | .value // "0"')
   local vuln_count=$(echo "$response" | jq -r '.component.measures[] | select(.metric=="vulnerabilities") | .value // "0"')
@@ -110,6 +113,7 @@ extract_sonar_summary() {
     echo "* security_hotspots: $sec_hotspot" >> $OUTPUT_FILE
   fi
 }
+
 
 # --- Run All Extractors ---
 [ -f trivy-fs.json ] && extract_trivy_json "trivy-fs.json"
