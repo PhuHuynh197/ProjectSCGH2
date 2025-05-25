@@ -1,9 +1,10 @@
-FROM eclipse-temurin:17-jdk
+FROM alpine:3.19
 
 WORKDIR /app
 
-COPY target/*.jar app.jar
+# Tạo user không phải root để tăng bảo mật
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
 
-EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# In ra dòng test đơn giản
+ENTRYPOINT ["/bin/sh", "-c", "echo Hello from secure container!"]
