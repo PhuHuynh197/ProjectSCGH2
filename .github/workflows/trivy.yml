@@ -19,6 +19,9 @@ jobs:
       - name: Trivy FileSystem Scan
         run: trivy fs . --format json -o trivy-fs.json
 
+      - name: Build JAR with Maven
+        run: mvn package -DskipTests
+
       - name: Build Docker image
         run: |
           docker build -t projectscgh2:latest . || echo "Skip docker build if no Dockerfile"
