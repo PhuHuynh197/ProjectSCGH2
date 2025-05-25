@@ -21,12 +21,12 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t projectscgh:latest . || echo "Skip docker build if no Dockerfile"
+          docker build -t projectscgh2:latest . || echo "Skip docker build if no Dockerfile"
 
       - name: Trivy Docker Image Scan
         run: |
           if [ -f Dockerfile ]; then
-            trivy image projectscgh:latest --format json -o trivy-image.json
+            trivy image projectscgh2:latest --format json -o trivy-image.json
           else
             echo "No Dockerfile found, skipping image scan."
           fi
