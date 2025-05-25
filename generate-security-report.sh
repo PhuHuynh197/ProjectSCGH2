@@ -1,7 +1,7 @@
 #!/bin/bash
 
 OUTPUT_FILE="security-report.md"
-echo "# 🛡️ Security Vulnerability Report (Generated: $(date -u))" > $OUTPUT_FILE
+echo "# Security Vulnerability Report (Generated: $(date -u))" > $OUTPUT_FILE
 echo "" >> $OUTPUT_FILE
 
 # --- CVSS to CIA Impact Mapping ---
@@ -35,14 +35,13 @@ asvs_mapping() {
 # --- Trivy JSON Scanner (Table Format) ---
 extract_trivy_json() {
   local FILE=$1
-  echo -e "\n## 🔍 Trivy Scan Report from \`$FILE\`" >> $OUTPUT_FILE
+  echo -e "\n## Trivy Scan Report from \`$FILE\`" >> $OUTPUT_FILE
 
-  # Đếm tổng số vulnerabilities thực tế từ tất cả Results
   local VULN_COUNT
   VULN_COUNT=$(jq '[.Results[]? | select(.Vulnerabilities != null) | .Vulnerabilities[]?] | length' "$FILE")
 
   if [[ "$VULN_COUNT" -eq 0 ]]; then
-    echo "✅ No vulnerabilities found in \`$FILE\`." >> $OUTPUT_FILE
+    echo "No vulnerabilities found in \`$FILE\`." >> $OUTPUT_FILE
     return
   fi
 
@@ -67,11 +66,11 @@ extract_trivy_json() {
 # --- Snyk SARIF Parser ---
 extract_snyk_sarif() {
   local FILE=$1
-  echo -e "\n## 🧪 Snyk Scan Report from \`$FILE\`" >> $OUTPUT_FILE
+  echo -e "\n## Snyk Scan Report from \`$FILE\`" >> $OUTPUT_FILE
 
   local VULNS=$(jq '.runs[0].results | length' "$FILE")
   if [[ "$VULNS" -eq 0 ]]; then
-    echo "**✅ No vulnerabilities found in \`$FILE\`.**" >> $OUTPUT_FILE
+    echo "** No vulnerabilities found in \`$FILE\`.**" >> $OUTPUT_FILE
     return
   fi
 
@@ -91,14 +90,13 @@ extract_snyk_sarif() {
 
 # --- SonarCloud Summary ---
 extract_sonar_summary() {
-  echo -e "\n## 📊 SonarCloud Summary" >> $OUTPUT_FILE
+  echo -e "\n## SonarCloud Summary" >> $OUTPUT_FILE
 
   if [[ -z "$SONAR_TOKEN" ]]; then
-    echo "⚠️ Skipped SonarCloud summary (missing SONAR_TOKEN env)" >> $OUTPUT_FILE
+    echo " Skipped SonarCloud summary (missing SONAR_TOKEN env)" >> $OUTPUT_FILE
     return
   fi
-  
-  # Determine repo name for SonarCloud component
+
   REPO_NAME=$(basename "$(git config --get remote.origin.url)" .git)
   API_URL="https://sonarcloud.io/api/measures/component?component=PhuHuynh197_${REPO_NAME}&metricKeys=bugs,vulnerabilities,security_hotspots"
 
@@ -109,7 +107,7 @@ extract_sonar_summary() {
   local sec_hotspot=$(echo "$response" | jq -r '.component.measures[] | select(.metric=="security_hotspots") | .value // "0"')
 
   if [[ "$bug_count" == "0" && "$vuln_count" == "0" && "$sec_hotspot" == "0" ]]; then
-    echo "**✅ No issues found in SonarCloud analysis.**" >> $OUTPUT_FILE
+    echo "** No issues found in SonarCloud analysis.**" >> $OUTPUT_FILE
   else
     echo "* bugs: $bug_count" >> $OUTPUT_FILE
     echo "* vulnerabilities: $vuln_count" >> $OUTPUT_FILE
@@ -118,14 +116,20 @@ extract_sonar_summary() {
 }
 
 # --- Run All Extractors ---
-[ -f trivy-fs.json ] && extract_trivy_json "trivy-fs.json"
-[ -f trivy-image.json ] && extract_trivy_json "trivy-image.json"
-[ -f snyk.sarif ] && extract_snyk_sarif "snyk.sarif"
-if [ ! -f trivy-image.json ]; then
-  echo -e "\n## 🔍 Trivy Scan Report from \`trivy-image.json\`" >> $OUTPUT_FILE
-  echo "**⚠️ Skipped: No Docker image was built, so image scan did not run.**" >> $OUTPUT_FILE
+if [ -f trivy-fs.json ]; then
+  extract_trivy_json "trivy-fs.json"
 fi
 
-extract_sonar_summary
+if [ -f trivy-image.json ]; then
+  extract_trivy_json "trivy-image.json"
+fi
 
-echo -e "\n✅ Done. Generated $OUTPUT_FILE"
+if [ -f snyk.sarif ]; then
+  extract_snyk_sarif "snyk.sarif"
+fi
+
+if [[ -n "$SONAR_TOKEN" && "$GITHUB_WORKFLOW" == *"SonarCloud"* ]]; then
+  extract_sonar_summary
+fi
+
+echo -e "\n Done. Generated $OUTPUT_FILE"
