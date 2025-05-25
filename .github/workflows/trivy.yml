@@ -1,0 +1,56 @@
+name: Trivy Scan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  trivy-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -y && sudo apt-get install -y trivy
+
+      - name: Trivy FileSystem Scan
+        run: trivy fs . --format json -o trivy-fs.json
+
+      - name: Build Docker image
+        run: |
+          docker build -t projectscgh:latest . || echo "Skip docker build if no Dockerfile"
+
+      - name: Trivy Docker Image Scan
+        run: |
+          if [ -f Dockerfile ]; then
+            trivy image projectscgh:latest --format json -o trivy-image.json
+          else
+            echo "No Dockerfile found, skipping image scan."
+          fi
+
+      - name: Generate Markdown Report (Trivy + Snyk + Sonar)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          chmod +x generate-security-report.sh
+          ./generate-security-report.sh
+
+      - name: Upload security-report.md
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+
+      - name: Commit security report
+        run: |
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/PhuHuynh197/Security-Report.git dest-repo
+          cp security-report.md dest-repo/
+          cd dest-repo
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add -f security-report.md
+          git commit -m "Add latest security scan report"
+          git push origin main
