@@ -25,10 +25,11 @@ jobs:
           echo "RESULTS_LENGTH=$RESULTS_LENGTH" >> $GITHUB_ENV
           echo "Found $RESULTS_LENGTH vulnerabilities."
 
-      - name: Fail job if vulnerabilities exist
+      - name: Flag job if vulnerabilities exist
         run: |
           if [ "$RESULTS_LENGTH" != 0 ]; then
             echo " Found $RESULTS_LENGTH vulnerabilities!"
+            echo "SNYK_FAILED=true" >> $GITHUB_ENV
           else
             echo " No vulnerabilities found."
           fi
@@ -56,3 +57,10 @@ jobs:
           git add -f security-report.md
           git commit -m "Add latest security scan report"
           git push origin main
+
+      - name: Fail job if vulnerabilities were found
+        run: |
+          if [[ "$SNYK_FAILED" == "true" ]]; then
+            echo "❌ Failing job due to vulnerabilities"
+            exit 1
+          fi
