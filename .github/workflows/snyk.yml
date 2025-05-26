@@ -25,16 +25,17 @@ jobs:
           echo "RESULTS_LENGTH=$RESULTS_LENGTH" >> $GITHUB_ENV
           echo "Found $RESULTS_LENGTH vulnerabilities."
 
-      - name: Flag job if vulnerabilities exist
+      - name: Fail job if vulnerabilities exist
         run: |
           if [ "$RESULTS_LENGTH" != 0 ]; then
             echo " Found $RESULTS_LENGTH vulnerabilities!"
-            echo "SNYK_FAILED=true" >> $GITHUB_ENV
+            exit 1
           else
             echo " No vulnerabilities found."
           fi
 
       - name: Generate Markdown Report (Trivy + Snyk + Sonar)
+        if: always()
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -42,12 +43,14 @@ jobs:
           ./generate-security-report.sh
 
       - name: Upload security-report.md
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-report
           path: security-report.md
 
       - name: Commit security report
+        if: always()
         run: |
           git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/PhuHuynh197/Security-Report.git dest-repo
           cp security-report.md dest-repo/
@@ -57,10 +60,3 @@ jobs:
           git add -f security-report.md
           git commit -m "Add latest security scan report"
           git push origin main
-
-      - name: Fail job if vulnerabilities were found
-        run: |
-          if [[ "$SNYK_FAILED" == "true" ]]; then
-            echo "❌ Failing job due to vulnerabilities"
-            exit 1
-          fi
