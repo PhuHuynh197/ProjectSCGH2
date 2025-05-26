@@ -33,6 +33,19 @@ jobs:
           else
             echo "No Dockerfile found, skipping image scan."
           fi
+          
+      - name: Fail job if Trivy found vulnerabilities
+        run: |
+          FS_COUNT=$(jq '[.Results[]? | select(.Vulnerabilities != null) | .Vulnerabilities[]?] | length' trivy-fs.json)
+          IMG_COUNT=0
+          if [ -f trivy-image.json ]; then
+            IMG_COUNT=$(jq '[.Results[]? | select(.Vulnerabilities != null) | .Vulnerabilities[]?] | length' trivy-image.json)
+          fi
+          TOTAL=$(($FS_COUNT + $IMG_COUNT))
+          echo "Trivy found $TOTAL vulnerabilities"
+          if [ "$TOTAL" -gt 0 ]; then
+            exit 1
+          fi
 
       - name: Generate Markdown Report (Trivy + Snyk + Sonar)
         env:
