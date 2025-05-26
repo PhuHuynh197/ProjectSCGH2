@@ -48,6 +48,7 @@ jobs:
           fi
 
       - name: Generate Markdown Report (Trivy + Snyk + Sonar)
+        if: always()
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
@@ -55,12 +56,14 @@ jobs:
           ./generate-security-report.sh
 
       - name: Upload security-report.md
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-report
           path: security-report.md
 
       - name: Commit security report
+        if: always()
         run: |
           git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/PhuHuynh197/Security-Report.git dest-repo
           cp security-report.md dest-repo/
