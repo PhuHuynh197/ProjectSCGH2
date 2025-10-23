@@ -1,0 +1,76 @@
+name: Gitleaks - Secret Scan
+
+on:
+  push:
+    branches: ["main", "**"]
+  pull_request:
+    branches: ["main", "**"]
+  workflow_dispatch:
+
+jobs:
+  gitleaks:
+    name: Run Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Prepare security folder
+        run: mkdir -p security
+
+      - name: Run Gitleaks (full repository scan)
+        run: |
+          echo "Running Gitleaks scan on full repository..."
+          docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            zricethezav/gitleaks:latest detect \
+            --source="/repo" \
+            --report-format sarif \
+            --report-path="/repo/security/gitleaks.sarif" \
+            --verbose \
+            --no-banner \
+            --no-git
+
+      - name: Debug SARIF output
+        run: |
+          echo "---- Files in security/ ----"
+          ls -la security || echo "No security folder found."
+          echo "---- Preview SARIF ----"
+          head -n 100 security/gitleaks.sarif || echo "No SARIF generated."
+
+      - name: Install jq
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
+      - name: Fail if secrets found
+        run: |
+          if [ -f security/gitleaks.sarif ]; then
+            COUNT=$(jq '.runs[0].results | length' security/gitleaks.sarif 2>/dev/null || echo 0)
+            echo "Gitleaks findings: $COUNT"
+            if [ "$COUNT" -gt 0 ]; then
+              echo "::error:: Gitleaks detected $COUNT secrets - failing job!"
+              exit 1
+            else
+              echo "No secrets found by Gitleaks."
+            fi
+          else
+            echo "::warning:: SARIF not generated - possible path issue."
+            exit 1
+          fi
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security/gitleaks.sarif
+
+      - name: Upload artifact (gitleaks report)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitleaks-report
+          path: security/gitleaks.sarif
