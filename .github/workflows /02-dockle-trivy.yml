@@ -1,0 +1,110 @@
+name: Container & Runtime Security - Trivy + Dockle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "**" ]
+  pull_request:
+
+jobs:
+  container-security:
+    runs-on: ubuntu-latest
+    env:
+      TRIVY_VERSION: 0.55.0
+      DOCKLE_VERSION: 0.4.14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t projectscgh2:latest .
+
+      - name: Prepare security folder
+        run: mkdir -p security
+
+      - name: Install utilities (trivy, dockle, jq)
+        run: |
+          set -eux
+          echo "Installing jq..."
+          sudo apt-get update -y
+          sudo apt-get install -y wget ca-certificates jq
+          echo "Installing Trivy v${TRIVY_VERSION}..."
+          wget -q "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+          sudo dpkg -i "trivy_${TRIVY_VERSION}_Linux-64bit.deb"
+          trivy --version
+          echo "Installing Dockle v${DOCKLE_VERSION}..."
+          wget -q "https://github.com/goodwithtech/dockle/releases/download/v${DOCKLE_VERSION}/dockle_${DOCKLE_VERSION}_Linux-64bit.tar.gz"
+          tar xzf "dockle_${DOCKLE_VERSION}_Linux-64bit.tar.gz"
+          sudo mv dockle /usr/local/bin/
+          dockle --version
+
+      - name: Scan Dockerfile for misconfigurations (Trivy)
+        run: |
+          echo "Trivy config scan (Dockerfile)..."
+          trivy config --format table --severity HIGH,CRITICAL -o security/trivy-dockerfile.txt . || true
+          # also produce JSON (for easier parsing later if needed)
+          trivy config --format json --severity HIGH,CRITICAL -o security/trivy-dockerfile.json . || true
+          echo "Trivy Dockerfile report generated."
+
+      - name: Scan built image for vulnerabilities (Trivy)
+        run: |
+          echo "Trivy image scan..."
+          # keep exit code non-fatal so we can upload artifacts; we'll evaluate later
+          trivy image --format table --severity HIGH,CRITICAL -o security/trivy-image.txt projectscgh:latest || true
+          trivy image --format json --severity HIGH,CRITICAL -o security/trivy-image.json projectscgh:latest || true
+          echo "Trivy image report generated."
+
+      - name: Run Dockle (container best-practices)
+        run: |
+          echo "Running Dockle to check container best-practices..."
+          # Output both simple human-readable and JSON for parsing
+          dockle -f simple projectscgh:latest | tee security/dockle-summary.txt || true
+          dockle -f json -o security/dockle-report.json projectscgh:latest || true
+          echo "Dockle reports generated."
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-security-reports
+          path: security/
+
+      - name: Fail if Trivy found HIGH/CRITICAL (image or dockerfile)
+        if: always()
+        run: |
+          set -eux
+          echo "Checking Trivy results for HIGH/CRITICAL..."
+          TRIVY_IMG_HIGH=$(jq -r '.Results[]?.Vulnerabilities[]?.Severity' security/trivy-image.json 2>/dev/null | grep -c -E 'HIGH|CRITICAL' || true)
+          TRIVY_CFG_HIGH=$(jq -r '.Results[]?.Misconfigurations[]?.Severity' security/trivy-dockerfile.json 2>/dev/null | grep -c -E 'HIGH|CRITICAL' || true)
+          echo "Trivy image HIGH/CRITICAL count: $TRIVY_IMG_HIGH"
+          echo "Trivy dockerfile HIGH/CRITICAL count: $TRIVY_CFG_HIGH"
+          if [ "${TRIVY_IMG_HIGH}" -gt 0 ] || [ "${TRIVY_CFG_HIGH}" -gt 0 ]; then
+            echo "::error::Trivy found HIGH/CRITICAL vulnerability or misconfiguration."
+            exit 1
+          else
+            echo "No HIGH/CRITICAL from Trivy."
+          fi
+
+      - name: Fail if Dockle found HIGH/CRITICAL issues (best-practice violations)
+        if: always()
+        run: |
+          set -eux
+          echo "Checking Dockle JSON for HIGH/CRITICAL issues..."
+          # dockle JSON entries have "severity" field (e.g. "HIGH","MEDIUM","LOW")
+          if [ -f security/dockle-report.json ]; then
+            DOCKLE_HIGH_COUNT=$(jq -r '.[] | select(.severity=="HIGH" or .severity=="CRITICAL")' security/dockle-report.json | wc -l || true)
+            echo "Dockle HIGH/CRITICAL count: ${DOCKLE_HIGH_COUNT}"
+            if [ "${DOCKLE_HIGH_COUNT}" -gt 0 ]; then
+              echo "::error::Dockle detected HIGH/CRITICAL best-practice findings. See security/dockle-report.json"
+              exit 1
+            else
+              echo "No HIGH/CRITICAL found by Dockle."
+            fi
+          else
+            echo "No dockle-report.json found — skipping Dockle fail check."
+          fi
