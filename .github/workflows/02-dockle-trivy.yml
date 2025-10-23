@@ -22,7 +22,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t projectscgh2:latest .
+          docker build -t projectscgh:latest .
 
       - name: Prepare security folder
         run: mkdir -p security
