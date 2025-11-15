@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload artifact (gitleaks report)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: gitleaks-report
           path: security/gitleaks.sarif
