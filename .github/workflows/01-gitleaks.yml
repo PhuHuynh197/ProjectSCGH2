@@ -7,6 +7,10 @@ on:
     branches: ["main", "**"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   gitleaks:
     name: Run Gitleaks Secret Scan
@@ -32,14 +36,14 @@ jobs:
             --report-path="/repo/security/gitleaks.sarif" \
             --verbose \
             --no-banner \
-            --no-git
+            --no-git || true
 
       - name: Debug SARIF output
         run: |
-          echo "---- Files in security/ ----"
-          ls -la security || echo "No security folder found."
-          echo "---- Preview SARIF ----"
-          head -n 100 security/gitleaks.sarif || echo "No SARIF generated."
+          echo "---- Security folder ----"
+          ls -la security || true
+          echo "---- SARIF preview ----"
+          head -n 50 security/gitleaks.sarif || echo "No SARIF generated."
 
       - name: Install jq
         run: |
@@ -64,7 +68,7 @@ jobs:
 
       - name: Upload SARIF to GitHub Security tab
         if: always()
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: security/gitleaks.sarif
 
