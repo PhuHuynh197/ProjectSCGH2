@@ -1,0 +1,66 @@
+name: SCA Dependency Scan - Grype
+
+on:
+  push:
+    branches: ["main", "**"]
+  pull_request:
+    branches: ["main", "**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  grype-scan:
+    runs-on: ubuntu-latest
+    name: Run Grype (SCA Scanner)
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Install Grype
+        run: |
+          echo "=== Installing Grype ==="
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sudo sh -s -- -b /usr/local/bin
+
+      - name: Create output folder
+        run: mkdir -p security
+
+      - name: Run Grype Scan (JSON Output)
+        run: |
+          echo "=== Running Grype SCA Scan ==="
+          grype dir:. -o json > security/grype-report.json
+
+      - name: Run Grype Scan (TABLE Output for viewing)
+        run: |
+          grype dir:. -o table > security/grype-report.txt
+
+      - name: Show security folder
+        run: ls -lah security
+
+      - name: Upload Grype Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: grype-sca-reports
+          path: security/
+
+      - name: Fail job if severity >= HIGH
+        run: |
+          REPORT="security/grype-report.json"
+
+          if [ ! -f "$REPORT" ]; then
+            echo "::error:: Grype report not found!"
+            exit 1
+          fi
+
+          HIGH_COUNT=$(jq '.matches[].vulnerability.severity | select(.=="High" or .=="Critical")' "$REPORT" | wc -l)
+
+          echo "High/Critical vulnerabilities found: $HIGH_COUNT"
+
+          if [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "::error:: High/Critical vulnerabilities detected!"
+            exit 1
+          else
+            echo "No High/Critical vulnerabilities found."
+          fi
