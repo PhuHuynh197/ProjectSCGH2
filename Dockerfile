@@ -1,10 +1,37 @@
-FROM alpine:3.19
+# Safer base image (slim)
+FROM debian:bullseye-slim
+
+LABEL maintainer="phu@example.com"
+LABEL security="hardened"
+
+# Install only required packages (no sudo, no sshd)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      curl wget ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create non-root user "app"
+RUN useradd -m -s /bin/bash app
 
 WORKDIR /app
 
-# Tạo user không phải root để tăng bảo mật
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-USER appuser
+# Copy source code
+COPY . /app
 
-# In ra dòng test đơn giản
-ENTRYPOINT ["/bin/sh", "-c", "echo Hello from secure container!"]
+# Remove any secret files if accidentally added
+RUN rm -f /app/.env || true
+
+VOLUME /app/data
+
+# Expose app port only (not SSH)
+EXPOSE 8080
+
+# Switch to non-root user
+USER app
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=5s \
+  CMD curl -f http://localhost:8080/ || exit 1
+
+# Run application (fake because project is security-testing)
+CMD ["bash", "-c", "echo 'App running as non-root user' && sleep infinity"]
