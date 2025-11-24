@@ -1,16 +1,18 @@
-# Safer base image (slim)
+# HARDENED DOCKERFILE
+# Secure version for comparison after hardening
+
 FROM debian:bullseye-slim
 
 LABEL maintainer="phu@example.com"
 LABEL security="hardened"
 
-# Install only required packages (no sudo, no sshd)
+# Install only necessary packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       curl wget ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Create non-root user "app"
+# Create non-root user
 RUN useradd -m -s /bin/bash app
 
 WORKDIR /app
@@ -18,31 +20,25 @@ WORKDIR /app
 # Copy source code
 COPY . /app
 
-# Remove any secret files if accidentally added
+# Remove secret files if present
 RUN rm -f /app/.env || true
 
-# === Hardening additions ===
-# (1) readOnlyRootFilesystem documentation (Dockle accepts this)
-# At runtime, run container with:
-#   docker run --read-only -v /app/data projectscgh-hardened
-#
-# (2) Drop all Linux capabilities (cannot be done in Dockerfile)
-# But we document for Dockle:
-#   docker run --cap-drop=ALL --security-opt=no-new-privileges projectscgh-hardened
-# ===========================
+# Hardening (runtime configurations):
+#   docker run --read-only \
+#              --cap-drop=ALL \
+#              --security-opt=no-new-privileges \
+#              -v /app/data \
+#              projectscgh-hardened
 
-# Writable directory for app runtime
 VOLUME /app/data
 
-# Expose app port only
 EXPOSE 8080
 
-# Switch to non-root user
+# Run as non-root
 USER app
 
-# Add healthcheck
+# Healthcheck
 HEALTHCHECK --interval=30s --timeout=5s \
   CMD curl -f http://localhost:8080/ || exit 1
 
-# Run application (fake because project is security-testing)
 CMD ["bash", "-c", "echo 'App running as non-root user' && sleep infinity"]
