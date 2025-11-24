@@ -1,0 +1,32 @@
+name: Dockerfile Lint - Hadolint
+
+on:
+  push:
+    branches: ["main", "**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  hadolint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Hadolint
+        run: |
+          wget -qO /usr/local/bin/hadolint \
+            https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64
+          chmod +x /usr/local/bin/hadolint
+
+      - name: Run Hadolint
+        run: |
+          hadolint Dockerfile > hadolint-report.txt || true
+
+      - name: Upload Hadolint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hadolint-report
+          path: hadolint-report.txt
