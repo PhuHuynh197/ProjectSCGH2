@@ -1,5 +1,6 @@
 version: 2
 updates:
+
   - package-ecosystem: "maven"
     directory: "/"
     schedule:
@@ -10,6 +11,35 @@ updates:
       - "PhuHuynh197"
     commit-message:
       prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      maven-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "security"]
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["docker", "security"]
+    commit-message:
+      prefix: "chore(docker)"
       include: "scope"
 
   - package-ecosystem: "github-actions"
