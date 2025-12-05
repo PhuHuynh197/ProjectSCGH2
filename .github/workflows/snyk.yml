@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload security-report.md
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: security-report
           path: security-report.md
