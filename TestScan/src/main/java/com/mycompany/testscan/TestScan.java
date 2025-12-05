@@ -2,11 +2,15 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  */
 
-package com.mycompany.testscansona;
+package com.mycompany.testscan;
 
-public class TestScansona {
+/**
+ *
+ * @author THIS PC
+ */
+public class TestScan {
+
     public static void main(String[] args) {
-        System.out.println("Hello from ProjectSCGH2 - this is a clean scan!");
+        System.out.println("Hello Phu Huynh!");
     }
 }
-
