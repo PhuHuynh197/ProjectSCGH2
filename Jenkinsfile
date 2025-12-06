@@ -66,7 +66,8 @@ pipeline {
                   --source="/repo" ^
                   --report-format json ^
                   --report-path="/repo/security/gitleaks.json" ^
-                  --no-banner || exit /b 0
+                  --exit-code 0 ^
+                  --no-banner
                 '''
             }
         }
@@ -126,17 +127,14 @@ pipeline {
                 bat '''
                 set found=0
         
-                REM === Trivy: chỉ fail khi có Severity CRITICAL thật ===
                 if exist security\\trivy-image.json (
                     findstr /I "\"Severity\":\"CRITICAL\"" security\\trivy-image.json > nul && set found=1
                 )
         
-                REM === Grype: severity = Critical ===
                 if exist security\\grype.json (
                     findstr /I "\"severity\":\"Critical\"" security\\grype.json > nul && set found=1
                 )
         
-                REM === Dockle: level = FATAL ===
                 if exist security\\dockle.json (
                     findstr /I "\"level\":\"FATAL\"" security\\dockle.json > nul && set found=1
                 )
