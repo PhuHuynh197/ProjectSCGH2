@@ -150,7 +150,8 @@ pipeline {
                 '''
             }
         }
-
+    }
+    
     post {
         always {
             echo "Jenkins DevSecOps Pipeline Finished"
