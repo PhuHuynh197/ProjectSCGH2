@@ -52,15 +52,3 @@ jobs:
         with:
           name: security-report
           path: security-report.md
-
-      - name: Commit security report
-        if: always()
-        run: |
-          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/PhuHuynh197/Security-Report.git dest-repo
-          cp security-report.md dest-repo/
-          cd dest-repo
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add -f security-report.md
-          git commit -m "Add latest security scan report"
-          git push origin main
