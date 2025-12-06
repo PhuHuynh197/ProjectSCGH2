@@ -134,12 +134,21 @@ pipeline {
                     string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')
                 ]) {
                     bat '''
+                    set SCAN_PATH=/src
+        
+                    if exist target\\dependency (
+                        echo [INFO] Detected target\\dependency - scanning resolved dependencies
+                        set SCAN_PATH=/src/target/dependency
+                    ) else (
+                        echo [INFO] target\\dependency not found - fallback scan on source
+                    )
+        
                     docker run --rm ^
                       -v "%cd%:/src" ^
                       -v dependency-check-data:/usr/share/dependency-check/data ^
                       owasp/dependency-check:latest ^
                       --project "%JOB_NAME%" ^
-                      --scan /src/target/dependency ^
+                      --scan %SCAN_PATH% ^
                       --format HTML ^
                       --out /src/security ^
                       --nvdApiKey %NVD_API_KEY% ^
