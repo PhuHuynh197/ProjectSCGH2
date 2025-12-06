@@ -1,44 +1,43 @@
-# HARDENED DOCKERFILE
-# Secure version for comparison after hardening
-
+# syntax=docker/dockerfile:1.7
+# Ultra-minimal & secure base image
 FROM debian:bullseye-slim
 
-LABEL maintainer="phu@example.com"
-LABEL security="hardened"
+LABEL org.opencontainers.image.title="secure-demo"
+LABEL org.opencontainers.image.description="Clean Dockerfile for DevSecOps demo"
+LABEL org.opencontainers.image.authors="phu@example.com"
+LABEL org.opencontainers.image.licenses="MIT"
 
-# Install only necessary packages
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      curl wget ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+# Disable interactive frontend
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Create non-root user
-RUN useradd -m -s /bin/bash app
+# Install only required runtime packages
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user with fixed UID/GID
+RUN groupadd -g 10001 app \
+ && useradd -u 10001 -g app -m -s /usr/sbin/nologin app
 
 WORKDIR /app
 
-# Copy source code
-COPY . /app
+# Copy files with correct ownership
+COPY --chown=app:app . /app
 
-# Remove secret files if present
-RUN rm -f /app/.env || true
+# Explicitly remove accidental secret files
+RUN rm -f /app/.env /app/*.key /app/*.pem || true
 
-# Hardening (runtime configurations):
-#   docker run --read-only \
-#              --cap-drop=ALL \
-#              --security-opt=no-new-privileges \
-#              -v /app/data \
-#              projectscgh-hardened
-
-VOLUME /app/data
-
+# Expose application port only
 EXPOSE 8080
 
-# Run as non-root
+# Switch to non-root user
 USER app
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s \
-  CMD curl -f http://localhost:8080/ || exit 1
+# Health check (lightweight)
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD curl -fsS http://localhost:8080/ || exit 1
 
-CMD ["bash", "-c", "echo 'App running as non-root user' && sleep infinity"]
+# Demo command (no shell injection, no root)
+CMD ["sh", "-c", "echo 'Secure container running as non-root' && sleep infinity"]
