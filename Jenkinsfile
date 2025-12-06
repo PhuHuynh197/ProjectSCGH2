@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "phuhuynh197/projectscgh-devsecops"
+        IMAGE_NAME = "phuhuynh197/${env.JOB_NAME}"
         IMAGE_TAG  = "latest"
     }
 
@@ -126,7 +126,7 @@ pipeline {
                       -v "%cd%:/src" ^
                       -v dependency-check-data:/usr/share/dependency-check/data ^
                       owasp/dependency-check:latest ^
-                      --project "ProjectSCGH-DevSecOps" ^
+                      --project "%JOB_NAME%" ^
                       --scan /src ^
                       --format HTML ^
                       --out /src/security ^
