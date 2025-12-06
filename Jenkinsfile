@@ -116,9 +116,38 @@ pipeline {
             }
         }
 
+        stage("Dependency-Check") {
+            steps {
+                bat '''
+                docker run --rm ^
+                  -v "%cd%:/src" ^
+                  -v dependency-check-data:/usr/share/dependency-check/data ^
+                  owasp/dependency-check:latest ^
+                  --project "ProjectSCGH-DevSecOps" ^
+                  --scan /src ^
+                  --format HTML ^
+                  --out /src/security ^
+                  --failOnCVSS 7.0
+                '''
+            }
+        }
+
         stage("Publish Artifacts") {
             steps {
                 archiveArtifacts artifacts: "security/**", fingerprint: true
+            }
+        }
+
+        stage("Publish Dependency-Check Report") {
+            steps {
+                publishHTML(target: [
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'security',
+                    reportFiles: 'dependency-check-report.html',
+                    reportName: 'OWASP Dependency-Check'
+                ])
             }
         }
 
