@@ -118,17 +118,18 @@ pipeline {
 
         stage("Dependency-Check") {
             steps {
-                bat '''
-                docker run --rm ^
-                  -v "%cd%:/src" ^
-                  -v dependency-check-data:/usr/share/dependency-check/data ^
-                  owasp/dependency-check:latest ^
-                  --project "ProjectSCGH-DevSecOps" ^
-                  --scan /src ^
-                  --format HTML ^
-                  --out /src/security ^
-                  --failOnCVSS 7.0
-                '''
+                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                    docker run --rm ^
+                      -v "%cd%:/src" ^
+                      -v dependency-check-data:/usr/share/dependency-check/data ^
+                      owasp/dependency-check:latest ^
+                      --project "ProjectSCGH-DevSecOps" ^
+                      --scan /src ^
+                      --format HTML ^
+                      --out /src/security ^
+                      --nvdApiKey %NVD_API_KEY% ^
+                      --failOnCVSS 7.0
+                }
             }
         }
 
