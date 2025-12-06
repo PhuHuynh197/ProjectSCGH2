@@ -118,7 +118,10 @@ pipeline {
 
         stage("Dependency-Check") {
             steps {
-                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                withCredentials([
+                    string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')
+                ]) {
+                    bat '''
                     docker run --rm ^
                       -v "%cd%:/src" ^
                       -v dependency-check-data:/usr/share/dependency-check/data ^
@@ -129,6 +132,7 @@ pipeline {
                       --out /src/security ^
                       --nvdApiKey %NVD_API_KEY% ^
                       --failOnCVSS 7.0
+                    '''
                 }
             }
         }
@@ -139,15 +143,15 @@ pipeline {
             }
         }
 
-        stage("Publish Dependency-Check Report") {
+        stage("Publish Dependency-Check HTML") {
             steps {
                 publishHTML(target: [
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
                     reportDir: 'security',
                     reportFiles: 'dependency-check-report.html',
-                    reportName: 'OWASP Dependency-Check'
+                    reportName: 'OWASP Dependency-Check Report',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: false
                 ])
             }
         }
