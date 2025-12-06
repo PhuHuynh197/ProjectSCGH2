@@ -135,24 +135,24 @@ pipeline {
                 ]) {
                     bat '''
                     set SCAN_PATH=/src
-        
+
                     if exist target\\dependency (
-                        echo [INFO] Detected target\\dependency - scanning resolved dependencies
+                        echo [INFO] Scan resolved Maven dependencies
                         set SCAN_PATH=/src/target/dependency
                     ) else (
-                        echo [INFO] target\\dependency not found - fallback scan on source
+                        echo [INFO] target\\dependency not found - fallback scan source
                     )
-        
+
                     docker run --rm ^
-                      -v "%cd%:/src" ^
-                      -v dependency-check-data:/usr/share/dependency-check/data ^
-                      owasp/dependency-check:latest ^
-                      --project "%JOB_NAME%" ^
-                      --scan %SCAN_PATH% ^
-                      --format HTML ^
-                      --out /src/security ^
-                      --nvdApiKey %NVD_API_KEY% ^
-                      --failOnCVSS 11
+                    -v "%cd%:/src" ^
+                    -v dependency-check-data:/usr/share/dependency-check/data ^
+                    owasp/dependency-check:latest ^
+                    --project "%JOB_NAME%" ^
+                    --scan %SCAN_PATH% ^
+                    --format HTML ^
+                    --out /src/security ^
+                    --nvdApiKey %NVD_API_KEY% ^
+                    --failOnCVSS 11
                     '''
                 }
             }
@@ -180,22 +180,33 @@ pipeline {
         stage("Fail On Critical") {
             steps {
                 bat '''
-                setlocal EnableDelayedExpansion
                 set found=0
         
-                if exist security\\trivy-image.json findstr /I "\"CRITICAL\"" security\\trivy-image.json >nul && set found=1
-                if exist security\\grype.json       findstr /I "\"Critical\""  security\\grype.json >nul && set found=1
-                if exist security\\dockle.json      findstr /I "\"FATAL\""     security\\dockle.json >nul && set found=1
-        
-                if exist security\\dependency-check-report.html (
-                  findstr /I "Vulnerabilities Found: 0" security\\dependency-check-report.html >nul || set found=1
+                REM === Trivy ===
+                if exist security\\trivy-image.json (
+                    findstr /I "\"Severity\":\"CRITICAL\"" security\\trivy-image.json > nul && set found=1
                 )
         
-                if "!found!"=="1" exit /b 1
-                exit /b 0
+                REM === Grype ===
+                if exist security\\grype.json (
+                    findstr /I "\"severity\":\"Critical\"" security\\grype.json > nul && set found=1
+                )
+        
+                REM === Dockle ===
+                if exist security\\dockle.json (
+                    findstr /I "\"level\":\"FATAL\"" security\\dockle.json > nul && set found=1
+                )
+        
+                if "%found%"=="1" (
+                    echo CRITICAL / FATAL security issues found!
+                    exit /b 1
+                ) else (
+                    echo No CRITICAL or FATAL vulnerabilities.
+                    exit /b 0
+                )
                 '''
             }
-        }
+        }  
     }
     
     post {
