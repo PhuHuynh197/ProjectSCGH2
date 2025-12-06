@@ -20,12 +20,12 @@ jobs:
           wget -qO /usr/local/bin/hadolint \
             https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64
           chmod +x /usr/local/bin/hadolint
-
+          
       - name: Run Hadolint
         run: |
           hadolint Dockerfile | tee hadolint-report.txt
-          ERROR_COUNT=$(grep -E '^DL|^SC' hadolint-report.txt | wc -l)
-          echo "Hadolint error count: $ERROR_COUNT"
+          ERROR_COUNT=$(grep -E '(DL|SC)[0-9]+' hadolint-report.txt | wc -l)
+          echo "Hadolint issue count: $ERROR_COUNT"
           if [ "$ERROR_COUNT" -gt 0 ]; then
             echo "::error::Hadolint found Dockerfile configuration issues."
             exit 1
