@@ -196,7 +196,11 @@ pipeline {
                 if exist security\\dockle.json (
                     findstr /I "\"level\":\"FATAL\"" security\\dockle.json > nul && set found=1
                 )
-        
+                REM === Gitleak ===
+                if exist security\\gitleaks.json (
+                    findstr /I "\"RuleID\":\"aws-access-key\"" security\\gitleaks.json && set found=1
+                )
+                
                 if "%found%"=="1" (
                     echo CRITICAL / FATAL security issues found!
                     exit /b 1
