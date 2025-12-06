@@ -125,21 +125,31 @@ pipeline {
             steps {
                 bat '''
                 set found=0
-
-                if exist security\\trivy-image.json findstr /I "CRITICAL" security\\trivy-image.json > nul && set found=1
-                if exist security\\grype.json       findstr /I "CRITICAL" security\\grype.json > nul && set found=1
-                if exist security\\dockle.json      findstr /I "CRITICAL" security\\dockle.json > nul && set found=1
-
+        
+                REM === Trivy: chỉ fail khi có Severity CRITICAL thật ===
+                if exist security\\trivy-image.json (
+                    findstr /I "\"Severity\":\"CRITICAL\"" security\\trivy-image.json > nul && set found=1
+                )
+        
+                REM === Grype: severity = Critical ===
+                if exist security\\grype.json (
+                    findstr /I "\"severity\":\"Critical\"" security\\grype.json > nul && set found=1
+                )
+        
+                REM === Dockle: level = FATAL ===
+                if exist security\\dockle.json (
+                    findstr /I "\"level\":\"FATAL\"" security\\dockle.json > nul && set found=1
+                )
+        
                 if %found%==1 (
-                    echo CRITICAL vulnerabilities found!
+                    echo CRITICAL / FATAL security issues found!
                     exit /b 1
                 ) else (
-                    echo No CRITICAL vulnerabilities.
+                    echo No CRITICAL or FATAL vulnerabilities.
                 )
                 '''
             }
         }
-    }
 
     post {
         always {
