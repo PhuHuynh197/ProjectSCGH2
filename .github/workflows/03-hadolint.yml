@@ -33,7 +33,7 @@ jobs:
 
       - name: Upload Hadolint report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: hadolint-report
           path: hadolint-report.txt
